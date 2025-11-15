@@ -1,8 +1,9 @@
 # QueueCTL (MongoDB) 🚀
 
 Production-grade, CLI-driven background job queue for Node.js with MongoDB. It handles enqueuing, concurrent workers, atomic locking, retries with exponential backoff, a Dead Letter Queue, and a minimal web dashboard.
+![Database Schema](schema.png)
 
-[https://drive.google.com/file/d/1QHb7Lgk-SSF6MiFSMLFJdVgoX37b6KP_/view?usp=drive_link]
+![Demo Link](https://drive.google.com/file/d/1QHb7Lgk-SSF6MiFSMLFJdVgoX37b6KP_/view?usp=drive_link)
 
 ## ✨ Features
 - Job enqueuing, persistent storage in MongoDB
