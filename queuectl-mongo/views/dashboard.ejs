@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QueueCTL Dashboard</title>
+  <style>
+    /* 1. Root variables for a modern color palette */
+    :root {
+      --background: #f4f7f6;
+      --card-bg: #ffffff;
+      --text: #222222;
+      --text-light: #555;
+      --border: #e6e6e6;
+      --primary: #007bff;
+      --primary-hover: #0056b3;
+      --danger: #dc3545;
+      --danger-hover: #c82333;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background-color: var(--background);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    h1 + p {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: var(--text-light);
+    }
+    h2 {
+      font-weight: 600;
+      margin-top: 2.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    /* 2. Bento Box Grid for Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .stat-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      
+      /* 4. Fade-in Animation for new items */
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* 3. Hover Animation */
+    .stat-box:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-hover);
+    }
+    
+    .stat-box h3 {
+      margin: 0;
+      color: var(--text-light);
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .stat-box .count {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 0.5rem;
+    }
+    /* Special colors for different states */
+    .stat-box.state-pending .count { color: #ffc107; }
+    .stat-box.state-processing .count { color: #17a2b8; }
+    .stat-box.state-dead .count { color: var(--danger); }
+    .stat-box.state-completed .count { color: #28a745; }
+
+
+    /* 4. Modern Table Styling */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden; /* For border-radius */
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #fcfcfc;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+    tr {
+      transition: background-color 0.2s ease;
+    }
+    tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 5. Animated Button */
+    .btn {
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+    .btn-retry {
+      background-color: var(--primary);
+      color: white;
+    }
+    .btn-retry:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+    }
+
+    /* 6. Pulse Animation for Loading Skeleton */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @keyframes fadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(10px);
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0);
+      }
+    }
+
+    .skeleton {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      background-color: #e0e0e0;
+      border-radius: 8px;
+    }
+    .skeleton-text {
+      height: 1em;
+      width: 70%;
+    }
+    .skeleton-title {
+      height: 1.5em;
+      width: 40%;
+      margin-bottom: 0.5rem;
+    }
+    .skeleton-count {
+      height: 2.5rem;
+      width: 50%;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>QueueCTL Dashboard</h1>
+    <p>Live monitor for all background jobs and workers.</p>
+    
+    <h2>Job Status</h2>
+    <div class="stats-grid" id="stats-container">
+      </div>
+  
+    <h2>Dead Letter Queue (DLQ)</h2>
+    <div class="table-container">
+      <table id="dlq-table">
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Command</th>
+            <th>Attempts</th>
+            <th>Failed At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="dlq-body">
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // --- Updated JavaScript ---
+    
+    const statsContainer = document.getElementById('stats-container');
+    const dlqBody = document.getElementById('dlq-body');
+
+    // --- Renders skeleton loaders
+    function showLoadingState() {
+      // Skeleton for stats
+      statsContainer.innerHTML = ''; // Clear
+      const states = ['Pending', 'Processing', 'Completed', 'Dead'];
+      states.forEach(state => {
+        const box = document.createElement('div');
+        box.className = 'stat-box';
+        box.innerHTML = `
+          <h3>${state}</h3>
+          <div class="skeleton skeleton-count"></div>
+        `;
+        statsContainer.appendChild(box);
+      });
+      
+      // Skeleton for table
+      dlqBody.innerHTML = `
+        <tr>
+          <td colspan="5">
+            <div class="skeleton skeleton-text" style="width: 100%; height: 60px;"></div>
+          </td>
+        </tr>
+      `;
+    }
+    
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        // --- Update Stats Boxes ---
+        statsContainer.innerHTML = ''; // Clear skeleton
+        const allStates = ['pending', 'processing', 'completed', 'dead'];
+        
+        allStates.forEach(state => {
+          const count = data.counts[state] || 0;
+          const box = document.createElement('div');
+          // Add state-specific class for coloring
+          box.className = `stat-box state-${state}`;
+          box.innerHTML = `
+            <h3>${state}</h3>
+            <div class="count">${count}</div>
+          `;
+          statsContainer.appendChild(box);
+        });
+
+        // --- Update DLQ Table ---
+        dlqBody.innerHTML = ''; // Clear skeleton
+        
+        if (data.dlqJobs.length === 0) {
+          dlqBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-light);">Dead Letter Queue is empty.</td></tr>';
+        } else {
+          data.dlqJobs.forEach(job => {
+            const row = document.createElement('tr');
+            row.style.animation = 'fadeIn 0.5s ease-out'; // Add fade-in to rows
+            row.innerHTML = `
+              <td>${job.id}</td>
+              <td>${job.command}</td>
+              <td>${job.attempts}</td>
+              <td>${new Date(job.updated_at).toLocaleString()}</td>
+              <td><button class="btn btn-retry" onclick="retryJob('${job.id}')">Retry</button></td>
+            `;
+            dlqBody.appendChild(row);
+          });
+        }
+
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+        statsContainer.innerHTML = '<p>Error loading stats. Is the server running?</p>';
+        dlqBody.innerHTML = '<tr><td colspan="5" style="color: var(--danger);">Error loading DLQ.</td></tr>';
+      }
+    }
+
+    async function retryJob(jobId) {
+      if (!confirm(`Are you sure you want to retry job: ${jobId}?`)) {
+        return;
+      }
+      try {
+        await fetch(`/api/dlq/retry/${jobId}`, { method: 'POST' });
+        // Refresh stats immediately after retrying
+        showLoadingState(); // Show skeleton immediately for fast feedback
+        fetchStats(); 
+      } catch (err) {
+        console.error('Error retrying job:', err);
+      }
+    }
+
+    // --- Initial Load ---
+    showLoadingState();
+    fetchStats();
+    
+    // --- Auto-refresh ---
+    setInterval(fetchStats, 5000); // Refresh every 5 seconds
+  </script>
+</body>
+</html>
